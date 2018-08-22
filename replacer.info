@@ -1,0 +1,5 @@
+name = Replacer
+description = Replase string in HTML
+core = 7.x
+package = "Other"
+configure = admin/config/content/replacer

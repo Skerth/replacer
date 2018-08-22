@@ -1,0 +1,133 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function replacer_menu() {
+  $items = array();
+
+  $items['admin/config/content/replacer'] = array(
+    'title' => 'Replacer',
+    'description' => 'Выполняет замены на странице',
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('replacer_config_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+  );
+
+  return $items;
+}
+
+/**
+ * Form of settings where you can change the replacements.
+ *
+ * @param $form
+ *
+ * @return mixed
+ */
+function replacer_config_form($form) {
+  $replacers = variable_get('replacer_config', NULL);
+  if ($replacers) {
+    $replacers = _converting_to_string_replacers(variable_get('replacer_config'));
+  }
+
+  $form['replacer_config'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Replacements'),
+    '#description' => t("Введите каждый заменитель с новой строчки, разделяя атрибуты вертикальной чертой |"),
+    '#default_value' => $replacers,
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Save',
+  );
+
+  return $form;
+}
+
+/**
+ * Module configuration form handler.
+ *
+ * @param $form
+ * @param $form_state
+ */
+function replacer_config_form_submit($form, &$form_state) {
+  $replacers = $form_state['values']['replacer_config'];
+  if($replacers != '') {
+    $replacers = _converting_to_array_replacers($replacers);
+  }
+
+  variable_set('replacer_config', $replacers);
+}
+
+
+/**
+ * Implements hook_process_HOOK().
+ *
+ * @param $vars
+ */
+function replacer_process_html(&$vars) {
+  $replacers = variable_get('replacer_config', '');/*
+  if (!path_is_admin(current_path()) && $replacers != '') {
+    $content = NULL;
+    foreach ($replacers as $replace) {
+      if (!empty($replace[2])) {
+        switch ($replace[2]) {
+          case 'variable':
+            $content = variable_get($replace[1]);
+            if (is_array($content)) {
+              $content = var_export($content, true);
+            }
+            break;
+          case 'block':
+            $block = block_load('block', $replace[1]);
+            $blocks = _block_render_blocks(array($block));
+            $blocks_build = _block_get_renderable_array($blocks);
+            $content = drupal_render($blocks_build);
+        }
+      }
+      else {
+        $content = $replace[1];
+      }
+
+      $vars['page'] = str_replace(
+        $replace[0],
+        $content,
+        $vars['page']
+      );
+    }
+  }*/
+}
+
+/**
+ * @param $string_replacers
+ *
+ * @return array
+ */
+function _converting_to_array_replacers($string_replacers) {
+  $replacers = explode(PHP_EOL, $string_replacers);
+
+  foreach($replacers as &$replace) {
+    $replace = trim($replace);
+    $replace = explode('|', $replace);
+  }
+
+  return $replacers;
+}
+
+/**
+ * @param $array_replacers
+ *
+ * @return string
+ */
+function _converting_to_string_replacers($array_replacers) {
+  foreach($array_replacers as &$replace) {
+    $replace = implode('|', $replace);
+  }
+
+  $replacers = implode(PHP_EOL, $array_replacers);
+
+  return $replacers;
+}

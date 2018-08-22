@@ -1,0 +1,8 @@
+<?php
+
+/**
+* Implements hook_uninstall().
+*/
+function replacer_uninstall() {
+  variable_del('replacer_config');
+}
