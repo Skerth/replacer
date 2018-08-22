@@ -87,6 +87,14 @@ function replacer_process_html(&$vars) {
             $content = _replacer_get_variable($replace[2]);
             break;
 
+          case 'function':
+            $args = array($replace[2]);
+            if (!empty($replace[3])) {
+              $args = array_merge($args, explode(':', $replace[3]));
+            }
+            $content = call_user_func_array("_replacer_get_function", $args);
+            break;
+
           case 'block':
             array_push($args, $replace[2]);
 
@@ -101,8 +109,7 @@ function replacer_process_html(&$vars) {
             $args = array($replace[2], $replace[3]);
 
             if (!empty($replace[4])) {
-              $views_args = explode(':', $replace[4]);
-              $args = array_merge($args, $views_args);
+              $args = array_merge($args, explode(':', $replace[4]));
             }
 
             $content = call_user_func_array("_replacer_get_views", $args);
@@ -162,6 +169,12 @@ function _replacer_get_variable($var_name) {
   }
 
   return $content;
+}
+
+function _replacer_get_function($function_name) {
+  $args = func_get_args();
+  unset($args[0]);
+  return call_user_func_array($function_name, $args);
 }
 
 /**
