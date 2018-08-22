@@ -28,6 +28,7 @@ function replacer_menu() {
  */
 function replacer_config_form($form) {
   $replacers = variable_get('replacer_config', NULL);
+
   if ($replacers) {
     $replacers = _converting_to_string_replacers(variable_get('replacer_config'));
   }
@@ -55,13 +56,13 @@ function replacer_config_form($form) {
  */
 function replacer_config_form_submit($form, &$form_state) {
   $replacers = $form_state['values']['replacer_config'];
-  if($replacers != '') {
+
+  if ($replacers != '') {
     $replacers = _converting_to_array_replacers($replacers);
   }
 
   variable_set('replacer_config', $replacers);
 }
-
 
 /**
  * Implements hook_process_HOOK().
@@ -69,27 +70,42 @@ function replacer_config_form_submit($form, &$form_state) {
  * @param $vars
  */
 function replacer_process_html(&$vars) {
-  $replacers = variable_get('replacer_config', '');/*
+  $replacers = variable_get('replacer_config', '');
+
   if (!path_is_admin(current_path()) && $replacers != '') {
-    $content = NULL;
     foreach ($replacers as $replace) {
-      if (!empty($replace[2])) {
-        switch ($replace[2]) {
-          case 'variable':
-            $content = variable_get($replace[1]);
-            if (is_array($content)) {
-              $content = var_export($content, true);
-            }
-            break;
-          case 'block':
-            $block = block_load('block', $replace[1]);
-            $blocks = _block_render_blocks(array($block));
-            $blocks_build = _block_get_renderable_array($blocks);
-            $content = drupal_render($blocks_build);
-        }
-      }
-      else {
-        $content = $replace[1];
+      $content = NULL;
+      $args = array();
+
+      switch ($replace[1]) {
+        case 'text':
+          $content = $replace[2];
+          break;
+
+        case 'variable':
+          $content = _replacer_get_variable($replace[2]);
+          break;
+
+        case 'block':
+          array_push($args, $replace[2]);
+
+          if (!empty($replace[3])) {
+            array_push($args, $replace[3]);
+          }
+
+          $content = call_user_func_array("_replacer_get_block", $args);
+          break;
+
+        case 'views':
+          $args = array($replace[2], $replace[3]);
+
+          if (!empty($replace[4])) {
+            $views_args = explode(':', $replace[4]);
+            $args = array_merge($args, $views_args);
+          }
+
+          $content = call_user_func_array("_replacer_get_views", $args);
+          break;
       }
 
       $vars['page'] = str_replace(
@@ -98,7 +114,7 @@ function replacer_process_html(&$vars) {
         $vars['page']
       );
     }
-  }*/
+  }
 }
 
 /**
@@ -130,4 +146,53 @@ function _converting_to_string_replacers($array_replacers) {
   $replacers = implode(PHP_EOL, $array_replacers);
 
   return $replacers;
+}
+
+/**
+ * @param $var_name
+ *
+ * @return mixed|null
+ */
+function _replacer_get_variable($var_name) {
+  $content = variable_get($var_name, '');
+  if (is_array($content)) {
+    $content = var_export($content, true);
+  }
+
+  return $content;
+}
+
+/**
+ * Строка в конфиге должна быть tag|block|block_delta|block_view, где:
+ *   block_delta:
+ *     ID блока в системе
+ *   block_view:
+ *     'full' - для полного отображения блока
+ *     'content' - для отображения содержимого блока
+ *
+ * Например: {{hot_prices}}|block|5|content
+ * Заменит тег {{hot_prices}} на содержимое блока, имеющий ID 5
+ *
+ * @param $delta
+ * @param string $block_view:
+ *   'full' - полное отображение
+ *   'content' - отображение содержимого
+ *
+ * @return string
+ */
+function _replacer_get_block($delta, $block_view = 'full') {
+  $block = block_load('block', $delta);
+  $blocks = _block_render_blocks(array($block));
+  $blocks_build = _block_get_renderable_array($blocks);
+  if($block_view == 'content') {
+    unset($blocks_build['block_' . $delta]['#theme_wrappers']);
+  }
+
+  return drupal_render($blocks_build);
+}
+
+function _replacer_get_views($name, $display_id) {
+  $args = func_get_args();
+
+  return call_user_func_array('views_embed_view', $args);
 }
