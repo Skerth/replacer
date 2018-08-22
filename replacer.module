@@ -77,42 +77,44 @@ function replacer_process_html(&$vars) {
       $content = NULL;
       $args = array();
 
-      switch ($replace[1]) {
-        case 'text':
-          $content = $replace[2];
-          break;
+      if (mb_strpos($vars['page'], $replace[0])) {
+        switch ($replace[1]) {
+          case 'text':
+            $content = $replace[2];
+            break;
 
-        case 'variable':
-          $content = _replacer_get_variable($replace[2]);
-          break;
+          case 'variable':
+            $content = _replacer_get_variable($replace[2]);
+            break;
 
-        case 'block':
-          array_push($args, $replace[2]);
+          case 'block':
+            array_push($args, $replace[2]);
 
-          if (!empty($replace[3])) {
-            array_push($args, $replace[3]);
-          }
+            if (!empty($replace[3])) {
+              array_push($args, $replace[3]);
+            }
 
-          $content = call_user_func_array("_replacer_get_block", $args);
-          break;
+            $content = call_user_func_array("_replacer_get_block", $args);
+            break;
 
-        case 'views':
-          $args = array($replace[2], $replace[3]);
+          case 'views':
+            $args = array($replace[2], $replace[3]);
 
-          if (!empty($replace[4])) {
-            $views_args = explode(':', $replace[4]);
-            $args = array_merge($args, $views_args);
-          }
+            if (!empty($replace[4])) {
+              $views_args = explode(':', $replace[4]);
+              $args = array_merge($args, $views_args);
+            }
 
-          $content = call_user_func_array("_replacer_get_views", $args);
-          break;
+            $content = call_user_func_array("_replacer_get_views", $args);
+            break;
+        }
+
+        $vars['page'] = str_replace(
+          $replace[0],
+          $content,
+          $vars['page']
+        );
       }
-
-      $vars['page'] = str_replace(
-        $replace[0],
-        $content,
-        $vars['page']
-      );
     }
   }
 }
@@ -184,7 +186,8 @@ function _replacer_get_block($delta, $block_view = 'full') {
   $block = block_load('block', $delta);
   $blocks = _block_render_blocks(array($block));
   $blocks_build = _block_get_renderable_array($blocks);
-  if($block_view == 'content') {
+
+  if ($block_view == 'content') {
     unset($blocks_build['block_' . $delta]['#theme_wrappers']);
   }
 
