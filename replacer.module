@@ -96,10 +96,10 @@ function replacer_process_html(&$vars) {
             break;
 
           case 'block':
-            array_push($args, $replace[2]);
+            $args = array($replace[2], $replace[3]);
 
-            if (!empty($replace[3])) {
-              array_push($args, $replace[3]);
+            if (!empty($replace[4])) {
+              array_push($args, $replace[4]);
             }
 
             $content = call_user_func_array("_replacer_get_block", $args);
@@ -185,18 +185,19 @@ function _replacer_get_function($function_name) {
  *     'full' - для полного отображения блока
  *     'content' - для отображения содержимого блока
  *
- * Например: {{hot_prices}}|block|5|content
+ * Например: {{hot_prices}}|block|block|5|content
  * Заменит тег {{hot_prices}} на содержимое блока, имеющий ID 5
  *
+ * @param $module
  * @param $delta
- * @param string $block_view:
+ * @param string $block_view :
  *   'full' - полное отображение
  *   'content' - отображение содержимого
  *
  * @return string
  */
-function _replacer_get_block($delta, $block_view = 'full') {
-  $block = block_load('block', $delta);
+function _replacer_get_block($module, $delta, $block_view = 'full') {
+  $block = block_load($module, $delta);
   $blocks = _block_render_blocks(array($block));
   $blocks_build = _block_get_renderable_array($blocks);
 
